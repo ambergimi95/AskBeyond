@@ -1,0 +1,447 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>超越乳癌 AI 問答</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700&display=swap">
+<style>
+/* Layout: one centered column. Hero (doctor mascot + title), chat log, composer, quick questions. Sources fold inside each answer. */
+:root{
+  --bg:#faf8fd; --surface:#ffffff; --ink:#2a2433; --ink-2:#6a6277; --line:#e3ddef;
+  --plum:#6b4a9e; --plum-soft:#efe9f8; --on-plum:#ffffff;
+  --mint:#e6f5ee; --mint-line:#bfe3cf; --mint-ink:#255a3c;
+  --rose:#a83a5f; --rose-soft:#fbe8ee;
+  --amber:#7a5200; --amber-soft:#fbefd2;
+  --font-display:"Noto Serif TC","Songti TC","PMingLiU",serif;
+  --font-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#16131c; --surface:#1f1b28; --ink:#ece8f3; --ink-2:#aaa2b9; --line:#352f44;
+    --plum:#b9a0f2; --plum-soft:#2e2644; --on-plum:#1a1426;
+    --mint:#1b2f25; --mint-line:#2f5240; --mint-ink:#a6dcbd;
+    --rose:#f19ab4; --rose-soft:#3a2230;
+    --amber:#f0c777; --amber-soft:#3a2d12;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16131c; --surface:#1f1b28; --ink:#ece8f3; --ink-2:#aaa2b9; --line:#352f44;
+  --plum:#b9a0f2; --plum-soft:#2e2644; --on-plum:#1a1426;
+  --mint:#1b2f25; --mint-line:#2f5240; --mint-ink:#a6dcbd;
+  --rose:#f19ab4; --rose-soft:#3a2230;
+  --amber:#f0c777; --amber-soft:#3a2d12;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:400 15.5px/1.8 var(--font-body);
+  padding-block:0 24px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+}
+:focus-visible{outline:2px solid var(--plum); outline-offset:2px}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+.app{max-width:760px; margin:0 auto; min-height:100vh; display:flex; flex-direction:column}
+
+/* hero */
+.hero{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px 18px; padding-top:min(14vh,120px); padding-bottom:28px}
+.mascot{position:relative; flex:none; width:104px; height:104px; border-radius:50%}
+.mascot svg{display:block; width:100%; height:100%}
+.mascot::after{content:""; position:absolute; inset:-4px; border-radius:50%; border:2px solid var(--plum); opacity:0; pointer-events:none}
+.mascot.talk::after{animation:pulse 1.4s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.94); opacity:.7} 100%{transform:scale(1.12); opacity:0}}
+.htext{min-width:0}
+.titlerow{display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px}
+h1{margin:0; font:700 clamp(26px,5vw,34px)/1.3 var(--font-display); text-wrap:balance}
+.beta{font-size:12px; font-weight:700; padding:0 10px; border-radius:999px; background:var(--amber-soft); color:var(--amber); border:1px solid var(--amber)}
+.sub{margin:2px 0 0; color:var(--ink-2)}
+.who{margin:2px 0 0; font-size:12.5px; color:var(--ink-2)}
+
+.chatting .hero{padding-top:20px; padding-bottom:12px; justify-content:flex-start; border-bottom:1px solid var(--line)}
+.chatting .mascot{width:48px; height:48px}
+.chatting h1{font-size:20px}
+.chatting .sub, .chatting .who{display:none}
+.chatting .quick{display:none}
+.newchat{display:none; margin-left:auto; font:inherit; font-size:13px; padding:4px 12px; border:1px solid var(--line); border-radius:999px; background:var(--surface); color:var(--ink); cursor:pointer}
+.newchat:hover{border-color:var(--plum)}
+.chatting .newchat{display:inline-block}
+
+/* log */
+#log{flex:1; display:flex; flex-direction:column; gap:22px; padding-block:20px}
+#log:empty{display:none}
+.me{align-self:flex-end; max-width:88%; padding:8px 14px; border-radius:16px 16px 4px 16px; background:var(--plum); color:var(--on-plum); overflow-wrap:anywhere; scroll-margin-top:12px}
+.bot{display:flex; gap:10px; align-items:flex-start}
+.bot .av{flex:none; width:36px; height:36px; border-radius:50%; margin-top:2px}
+.bot .av svg{display:block; width:100%; height:100%}
+.bubble{min-width:0; flex:1; padding:12px 16px; background:var(--surface); border:1px solid var(--line); border-radius:4px 16px 16px 16px}
+.bubble.guard{border-color:var(--rose)}
+.bubble.warn{border-color:var(--amber)}
+.tagline{display:inline-block; margin-bottom:6px; font-size:12px; font-weight:700; line-height:1.7; padding:0 9px; border-radius:999px}
+.t-pre{background:var(--plum-soft); color:var(--plum)}
+.t-guard{background:var(--rose-soft); color:var(--rose)}
+.t-warn{background:var(--amber-soft); color:var(--amber)}
+.t-live{background:var(--mint); color:var(--mint-ink)}
+.abody{white-space:pre-wrap; overflow-wrap:anywhere}
+.abody:empty::before{content:"整理中…"; color:var(--ink-2)}
+.cite{font:inherit; font-size:11.5px; line-height:1.5; margin:0 2px; padding:0 6px; border:0; border-radius:4px; background:var(--plum-soft); color:var(--plum); cursor:pointer}
+.cite:hover{background:var(--plum); color:var(--on-plum)}
+.warnline{margin:8px 0 0; font-size:13px; color:var(--amber)}
+.srcs{margin-top:10px; border-top:1px solid var(--line); padding-top:8px; font-size:13.5px}
+.srcs summary{cursor:pointer; color:var(--ink-2)}
+.src{margin-top:8px; padding:10px 12px; border-radius:8px; background:var(--bg); border:1px solid var(--line)}
+.srcmeta{display:flex; flex-wrap:wrap; gap:2px 10px; align-items:baseline; font-size:12.5px; color:var(--ink-2)}
+.srcmeta b{color:var(--ink); font-variant-numeric:tabular-nums}
+.stext{margin:6px 0 0; font:400 13.5px/1.85 var(--font-display); white-space:pre-line; overflow-wrap:anywhere}
+.figtag{margin:6px 0 0; font-size:11.5px; color:var(--ink-2)}
+.flash{animation:flash 1.2s ease-out}
+@keyframes flash{0%{box-shadow:0 0 0 3px var(--plum)} 100%{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.mascot.talk::after{animation:none; opacity:.5} .flash{animation:none; outline:2px solid var(--plum)}}
+
+/* composer */
+.composer{position:sticky; bottom:0; padding-block:12px calc(12px + env(safe-area-inset-bottom, 0px)); background:var(--bg)}
+.box{display:flex; align-items:flex-end; gap:8px; padding:10px 10px 10px 18px; background:var(--surface); border:1px solid var(--line); border-radius:24px; box-shadow:0 1px 8px rgba(80,60,120,.08)}
+.box:focus-within{border-color:var(--plum)}
+.box textarea{flex:1; min-width:0; min-height:56px; max-height:160px; resize:none; border:0; outline:0; background:transparent; color:var(--ink); font:inherit; line-height:1.7; padding:6px 0}
+.box textarea::placeholder{color:var(--ink-2)}
+.box button{flex:none; font:inherit; font-weight:700; padding:8px 20px; border:0; border-radius:12px; background:var(--plum); color:var(--on-plum); cursor:pointer}
+.box button:disabled{opacity:.5; cursor:progress}
+
+/* quick questions */
+.quick{text-align:center; padding-top:8px}
+.qhint{margin:0 0 12px; font-size:14px; color:var(--ink-2)}
+.chips{display:flex; flex-wrap:wrap; justify-content:center; gap:10px}
+.chip{font:inherit; font-weight:500; padding:10px 18px; color:var(--ink); background:var(--mint); border:1px solid var(--mint-line); border-radius:999px; cursor:pointer}
+.chip:hover{border-color:var(--plum)}
+.chip:disabled{opacity:.55; cursor:progress}
+
+.foot{margin:0; padding-top:16px; text-align:center; font-size:12.5px; color:var(--ink-2)}
+.foot span{display:block}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="doc" viewBox="0 0 120 120">
+    <circle cx="60" cy="60" r="60" fill="#d9ccf0"/>
+    <path d="M14 104c4-22 22-32 46-32s42 10 46 32a60 60 0 0 1-92 0z" fill="#ffffff"/>
+    <path d="M44 74l16 22 16-22" fill="#e8e1f4" stroke="#c9bde3" stroke-width="2" stroke-linejoin="round"/>
+    <path d="M40 78c-4 14 2 24 12 24" fill="none" stroke="#4a3a6a" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M80 78c4 14-2 24-12 24" fill="none" stroke="#4a3a6a" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="52" cy="104" r="4.5" fill="#6b4a9e"/>
+    <rect x="52" y="60" width="16" height="16" rx="6" fill="#f1c9a5"/>
+    <ellipse cx="60" cy="46" rx="21" ry="23" fill="#f6d3b3"/>
+    <path d="M38 44c-2-16 8-27 22-27s24 10 22 27c-4-8-10-12-22-12s-18 4-22 12z" fill="#5a4a6e"/>
+    <circle cx="51" cy="48" r="2.6" fill="#3b2f4d"/>
+    <circle cx="69" cy="48" r="2.6" fill="#3b2f4d"/>
+    <path d="M52 58c4 5 12 5 16 0" fill="none" stroke="#b5654a" stroke-width="2.6" stroke-linecap="round"/>
+    <circle cx="45" cy="55" r="3.4" fill="#f2a9a0" opacity=".55"/>
+    <circle cx="75" cy="55" r="3.4" fill="#f2a9a0" opacity=".55"/>
+    <rect x="44" y="40" width="14" height="11" rx="5" fill="none" stroke="#6b4a9e" stroke-width="2"/>
+    <rect x="62" y="40" width="14" height="11" rx="5" fill="none" stroke="#6b4a9e" stroke-width="2"/>
+    <path d="M58 45h4" stroke="#6b4a9e" stroke-width="2"/>
+  </symbol>
+</svg>
+
+<div class="app" id="app">
+  <header class="hero">
+    <div class="mascot" id="mascot" role="img" aria-label="AI 醫師公仔，原創卡通造型"><svg><use href="#doc"/></svg></div>
+    <div class="htext">
+      <div class="titlerow">
+        <h1>超越乳癌 AI 問答</h1>
+        <span class="beta">測試版</span>
+      </div>
+      <p class="sub">從分期到治療流程，都可以問問。</p>
+      <p class="who">AI 醫師公仔（示意造型）· 依《超越乳癌》內容回答</p>
+    </div>
+    <button id="newchat" class="newchat" type="button">新對話</button>
+  </header>
+
+  <div id="log" aria-live="polite"></div>
+
+  <form id="ask" class="composer" autocomplete="off">
+    <div class="box">
+      <label for="qin" class="sr">輸入問題</label>
+      <textarea id="qin" rows="2" maxlength="120" placeholder="輸入您的問題…"></textarea>
+      <button id="send" type="submit">送出</button>
+    </div>
+  </form>
+
+  <section class="quick" aria-label="快速提問">
+    <p class="qhint">有任何問題都可以直接輸入，或從這些開始</p>
+    <div id="chips" class="chips"></div>
+  </section>
+
+  <p class="foot"><span>回應由 AI 生成，可能有疏漏或錯誤；重要內容請以書籍與主治醫師為準。</span><span>原型展示版，內容取自《超越乳癌》第 64–65、72–73 頁，尚未公開。</span></p>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+//#LOGIC-START
+const KB=[
+ {id:'c1',page:'64',sec:'2-4 乳癌的病理分期與預後因子',title:'分期的重要性與七個預後因子',fig:true,kw:'預後因子 七個因子',
+  text:'目前，由美國癌症聯合委員會與全世界的抗癌聯盟有整合的共識，決定全世界要有一致的癌症分期。對臨床醫師而言，正確的診斷和癌症的分類與分期，是作為選擇最適切的治療及預測病人存活最重要的依據。根據各種大型研究報告，對早期乳癌確認了七個可以影響預後的重要因子（預後因子）：淋巴結是否轉移、原發腫瘤大小、核仁分化級數、荷爾蒙接受體有無、腫瘤組織類別、細胞增生速率、HER2 是否過度表現。\n據此臨床醫師能對大部分乳癌患者的選擇輔助治療有良好的判定依據，其中又以淋巴結轉移狀態最為重要；針對淋巴結轉移的陽性患者，術後需給予化學治療或荷爾蒙治療（荷爾蒙受體陽性）或放射線治療，已是各國專家皆有的共識。'},
+ {id:'c2',page:'64',sec:'2-4 乳癌的病理分期與預後因子',title:'分期的臨床實用價值',
+  text:'癌症分期有其臨床上的實用價值，包括：可更明確認識腫瘤情況，包括體積大小、生長速率及擴散程度；一般而言，細小原位（零期癌）與病灶僅限於乳房與區域淋巴結的腫瘤屬於早期，擴散到遠處部位，則屬於晚期。可策劃適當的治療方法。能可靠地評估病人復原或痊癒的機會有多少，亦即醫學上所稱的「預後」。可嚴格定義，並且統一規範，除了方便統計，也能讓相關醫學專業人士彼此相互切磋，更有效地比較各種治療的結果。'},
+ {id:'c3',page:'65',sec:'2-4 乳癌的病理分期與預後因子',title:'臨床乳癌分期表',fig:true,kw:'期別 幾期 分期表',
+  text:'零期：即原位癌，為最早期乳癌，癌細胞僅在乳腺管基底層或乳小葉內。\n第一期：腫瘤小於 2 公分以下的浸潤癌，而腋下淋巴結無癌轉移。\n第二期：腫瘤介於 2 至 5 公分之間的浸潤癌，或腫瘤小於 2 公分但腋下淋巴結有癌轉移（≦3 顆）。\n第三期：局部廣泛性乳癌，腫瘤大於 5 公分的浸潤癌，且腋下淋巴結有癌轉移或有胸壁皮膚的浸潤癌（≧3 顆）。\n第四期：轉移性乳癌，已有遠處器官轉移（如肝、肺、骨）等。'},
+ {id:'c4',page:'65',sec:'2-4 乳癌的病理分期與預後因子',title:'AJCC 第八版分期',
+  text:'美國癌症聯合委員會癌症分期於 2018 年 AJCC 第八版之分類中，將之分成臨床分期、預後分期、臨床預後分期與病理預後分期（此分期是指有經過外科手術切除乳房後加上臨床資訊、生物指標資料及切下來標本之組織資訊共同作分析，為最準確嶄新之分期）。'},
+ {id:'c5',page:'72',sec:'3-1 乳癌的個人化治療',title:'本章涵蓋的治療方式',
+  text:'對於乳癌之放射治療、化學治療、手術治療、重建、荷爾蒙治療、標靶治療及免疫治療等均會在本章節中做基本之介紹，得以讓讀者了解乳癌治療的多樣化及現今之發展，而各種用藥也以圖說方式讓讀者更能了解用藥細節與可能之副作用，以做參考。'},
+ {id:'c6',page:'72',sec:'3-1 乳癌的個人化治療',title:'乳癌的發生率與死亡率',
+  text:'根據研究資料顯示，民國 88 年國內女性乳癌每年新增病例約 2000 例，民國 106 年新增乳癌人數高達 13965 人，增加的速度驚人。自 98 年起發生率已躍居女性癌症第一名，直至現在依然首居排行榜第一位。而死亡率在 108 年為第三名，死亡率之排名較發生率低，其中原因在於乳癌近年的治療方法多元化，可以因腫瘤之期別、特性，因而制定較完整、較周全的治療計畫，及乳癌篩檢可以偵測到手觸摸不到的早期乳癌。'},
+ {id:'c7',page:'72',sec:'3-1 乳癌的個人化治療',title:'乳癌的分子生物學分類',
+  text:'這是目前乳癌可以從傳統的 TNM 之分期再進步到精準醫療境界最重要的環節之一，使用分子亞型分類法在不同的 TNM 分期下，也會有許多不同的治療方式。這種分類初期是用 cDNA 微陣列分析基因表現檢測病人之樣本加以分析後，區分成五類。這五類和生物標記組合得到之結果相符程度很高，因此臨床上能用此分類來做為治療之依據，而不是完全依賴傳統之 TNM 系統。'},
+ {id:'c8',page:'73',sec:'3-1 乳癌的個人化治療',title:'早期乳癌的治療流程',fig:true,kw:'治療流程 流程圖',
+  text:'1. 確診乳癌\n2. 視腫瘤大小、部位及有無轉移（有轉移者，進入轉移性乳癌治療）\n3. 術前新輔助治療（化療、標靶、荷爾蒙治療）；圖中另有不經術前治療、直接進入手術的路徑\n4. 手術：乳房全切除＋腋下淋巴結切除或哨兵淋巴結切片，或乳房保留術＋腋下淋巴結切除或哨兵淋巴結切片\n5. 病理檢查報告（腫瘤化驗）\n6. 術後輔助治療：化學治療、放射治療、標靶治療、荷爾蒙治療\n7. 定期追蹤'},
+ {id:'c9',page:'73',sec:'3-1 乳癌的個人化治療',title:'術後輔助治療與個人化',fig:true,kw:'醫師 溝通 個人化治療',
+  text:'術後輔助治療包括化學治療、放射治療、標靶治療、荷爾蒙治療。不同期別與型態的腫瘤，治療方式不同。須與醫師充分溝通，找出最適宜的個人化治療。'}
+];
+const byId=Object.fromEntries(KB.map(c=>[c.id,c]));
+KB.forEach(c=>{c.hay=(c.title+c.text+(c.kw||'')).toUpperCase();});
+
+const LEX=['預後因子','預後','因子','七個','分期','零期','原位癌','第一期','第二期','第三期','第四期','浸潤','淋巴結','腋下','HER2','荷爾蒙','接受體','腫瘤大小','核仁','細胞增生','組織類別','轉移','遠處','早期','晚期','AJCC','TNM','確診','流程','新輔助','術前','術後','輔助','手術','全切除','保留','哨兵','病理','化驗','化學治療','化療','放射','標靶','追蹤','分子','亞型','精準','個人化','發生率','死亡率','新增','篩檢','免疫','重建','副作用','用藥','醫師','溝通'].map(t=>t.toUpperCase());
+const BOOST=[
+ {re:/問醫師|問醫生|該問|可以問|門診|諮詢|怎麼問|問什麼/,ids:['c1','c8','c9'],w:3},
+ {re:/流程|步驟|接下來/,ids:['c8','c9'],w:3}
+];
+const CRISIS_RE=/放棄治療|不想(再)?治療|不要治療|不治療了|不想活|想死|自殺|輕生|結束(自己的)?生命|活不下去|撐不下去/;
+const ADVICE_RE=/(自己|擅自|私自).{0,4}(停|減|換|加|吃|打)|停藥|停掉|不吃藥|不要吃藥|劑量|吃幾顆|吃多少|這個藥我|該吃什麼藥|要不要.{0,4}(化療|化學治療|開刀|手術|放療|放射|荷爾蒙|標靶|切除)|該不該|我.{0,4}(是|算|屬於).{0,2}第.期|我的.{0,6}(診斷|分期|報告|復發)/;
+
+function normQuery(q){
+  const map={'0':'零','零':'零','1':'一','一':'一','I':'一','2':'二','二':'二','II':'二','3':'三','三':'三','III':'三','4':'四','四':'四','IV':'四'};
+  return q.replace(/第?\s*(IV|III|II|I|0|零|1|2|3|4|一|二|三|四)\s*期/gi,function(m,n){
+    const k=map[n.toUpperCase()]||map[n];
+    return k==='零'?'零期':'第'+k+'期';
+  });
+}
+function retrieve(q){
+  const nq=normQuery(q).toUpperCase();
+  const score=new Map(KB.map(c=>[c.id,0]));
+  for(const c of KB){
+    let s=0;
+    for(const t of LEX){ if(nq.includes(t)&&c.hay.includes(t)) s+=t.length; }
+    score.set(c.id,s);
+  }
+  for(const b of BOOST){ if(b.re.test(q)) b.ids.forEach(id=>score.set(id,score.get(id)+b.w)); }
+  const ranked=KB.map(c=>({c,s:score.get(c.id)})).filter(x=>x.s>=2).sort((a,b)=>b.s-a.s);
+  if(!ranked.length) return [];
+  const top=ranked[0].s;
+  return ranked.filter(x=>x.s>=top*0.4).slice(0,3).map(x=>x.c);
+}
+function decide(q){
+  if(CRISIS_RE.test(q)) return {kind:'crisis'};
+  if(ADVICE_RE.test(q)) return {kind:'advice'};
+  const hits=retrieve(q);
+  return hits.length?{kind:'rag',hits}:{kind:'oos'};
+}
+//#LOGIC-END
+
+const MSG={
+ crisis:'謝謝你願意說出來。治療的過程可能很累、也很讓人擔心，這些感受都是真實的。\n\n在做任何決定之前，建議先和主治醫師或個案管理師談談現在最困擾的是什麼，例如副作用、疲累、費用或擔心，這些常常有辦法一起想。\n\n如果覺得撐不下去，或有傷害自己的念頭，請現在就聯絡：\n・安心專線 1925（24 小時，免費）\n・生命線 1995\n・情況緊急請撥 119\n\n這個 Demo 不能取代醫療團隊或專業協助。',
+ advice:'這個問題涉及個人的用藥或治療決定，Demo 不回答，也不會建議停藥、換藥或調整劑量。請先不要自行停藥或改變用藥，先聯絡醫療團隊。\n\n書中提醒，不同期別與型態的腫瘤，治療方式不同，須與醫師充分溝通，找出最適宜的個人化治療。[S1]\n\n可以把目前的用藥名稱、出現的症狀和想問的事整理好，直接詢問主治醫師、藥師或個案管理師。若出現嚴重不適，請盡快就醫。',
+ oos:'這個問題在目前載入的內容裡查不到相關說明，所以不回答，避免說出書中沒有的內容。\n\nDemo 目前只載入 2-4（第 64–65 頁）與 3-1（第 72–73 頁）兩個章節。規劃中的正式版會涵蓋全書，並由醫師審核內容。若想問的是個人的病情，請直接詢問主治醫師。',
+ offline:'目前無法連線到 Claude，預錄示範模式只能回答快速提問裡的問題。下方列出的是檢索到的書中段落。',
+ denied:'尚未允許 Claude 回答。重新整理頁面後，在跳出的視窗中選擇允許即可。下方列出的是檢索到的書中段落。',
+ rate:'提問太密集，請稍等幾秒再試。',
+ fail:'回答時發生錯誤，請再送出一次。'
+};
+
+const CHIPS=[
+ {label:'二期和三期差在哪',q:'第二期和第三期乳癌差在哪？',
+  canned:{ids:['c3','c1'],text:'依書中第 65 頁的臨床分期表：\n・第二期：腫瘤介於 2 至 5 公分之間的浸潤癌；或腫瘤小於 2 公分，但腋下淋巴結有癌轉移（≦3 顆）。[S1]\n・第三期：局部廣泛性乳癌，腫瘤大於 5 公分的浸潤癌，且腋下淋巴結有癌轉移，或有胸壁皮膚的浸潤癌（≧3 顆）。[S1]\n\n簡單說，差別主要在腫瘤大小，以及腋下淋巴結受影響的情形。書中也指出，淋巴結轉移狀態是影響預後最重要的因子。[S2]\n\n實際屬於第幾期，要由醫師依檢查與病理報告判定，請與主治醫師討論。'}},
+ {label:'確診後治療流程',q:'確診乳癌後，治療流程是什麼？',
+  canned:{ids:['c8','c9'],text:'書中第 73 頁「早期乳癌的治療流程」大致如下：\n1. 確診乳癌。[S1]\n2. 視腫瘤大小、部位及有無轉移評估；若已有轉移，則進入轉移性乳癌治療。[S1]\n3. 術前新輔助治療（化療、標靶、荷爾蒙治療）；圖中另有不經術前治療、直接手術的路徑。[S1]\n4. 手術：乳房全切除或乳房保留術，搭配腋下淋巴結切除或哨兵淋巴結切片。[S1]\n5. 病理檢查報告（腫瘤化驗）。[S1]\n6. 術後輔助治療：化學治療、放射治療、標靶治療、荷爾蒙治療。不同期別與型態的腫瘤，治療方式不同。[S2]\n7. 定期追蹤。[S1]\n\n每個人適合的做法不同，書中提醒須與醫師充分溝通，找出最適宜的個人化治療。[S2]'}},
+ {label:'家人確診該問醫師什麼',q:'媽媽剛確診乳癌，我該先問醫師什麼？',
+  canned:{ids:['c1','c8','c9'],text:'書中沒有直接列出「該問醫師的問題清單」，但可以依內容整理成幾個方向，帶去門診詢問：\n・腫瘤多大、目前是第幾期？書中指出，正確的分期是選擇治療與預測預後最重要的依據。[S1]\n・腋下淋巴結有沒有轉移？書中說這是影響預後最重要的因子，淋巴結轉移陽性的患者，術後需要化學治療、荷爾蒙治療或放射線治療。[S1]\n・荷爾蒙接受體與 HER2 的檢測結果是什麼？這兩項都在七個預後因子之中。[S1]\n・要不要先做術前治療？手術是乳房全切除，還是乳房保留術？[S2]\n・病理報告出來後，術後需要哪些輔助治療？[S3]\n\n書中也提醒，要與醫師充分溝通，找出最適宜的個人化治療。[S3]'}},
+ {label:'七個預後因子',q:'影響乳癌預後的七個重要因子是什麼？',
+  canned:{ids:['c1','c2'],text:'書中第 64 頁指出，對早期乳癌確認了七個可以影響預後的重要因子：[S1]\n・淋巴結是否轉移\n・原發腫瘤大小\n・核仁分化級數\n・荷爾蒙接受體有無\n・腫瘤組織類別\n・細胞增生速率\n・HER2 是否過度表現\n\n其中以淋巴結轉移狀態最為重要。[S1]\n「預後」指的是病人復原或痊癒的機會有多少。[S2]'}},
+ {label:'發生率與死亡率',q:'台灣乳癌的發生率和死亡率現在是什麼情形？',
+  canned:{ids:['c6'],text:'依書中第 72 頁的資料：\n・民國 88 年，國內女性乳癌每年新增病例約 2000 例；民國 106 年新增人數高達 13965 人，增加的速度驚人。[S1]\n・自民國 98 年起，乳癌發生率躍居女性癌症第一名，書中說直至現在依然居首。[S1]\n・死亡率在民國 108 年排名第三，比發生率的排名低。書中說明原因是治療方法多元化，可依期別與特性制定較完整的治療計畫，加上乳癌篩檢能偵測到摸不到的早期乳癌。[S1]\n\n以上是書中記載的統計，最新數字請以官方資料為準。'}},
+ {label:'藥可以自己停嗎',q:'這個藥我可以自己停嗎？'},
+ {label:'PARP 抑制劑',q:'PARP 抑制劑適合哪些患者使用？'},
+ {label:'我想放棄治療',q:'我想放棄治療了'}
+];
+
+const TAG={
+ rag:{label:'依書中內容回答',cls:'t-live'},
+ canned:{label:'預錄示範答案',cls:'t-pre'},
+ advice:{label:'不提供個人用藥建議',cls:'t-guard'},
+ oos:{label:'書中查無資料，不作答',cls:'t-warn'},
+ crisis:{label:'關懷與求助指引',cls:'t-guard'},
+ error:{label:'無法回答',cls:'t-warn'}
+};
+const BUBBLE={advice:'guard',crisis:'guard',oos:'warn',error:'warn'};
+
+const $=s=>document.querySelector(s);
+const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function h(tag,props,...kids){
+  const el=document.createElement(tag);
+  if(props) for(const [k,v] of Object.entries(props)){
+    if(k==='class') el.className=v;
+    else if(k==='text') el.textContent=v;
+    else if(k.startsWith('on')) el.addEventListener(k.slice(2),v);
+    else el.setAttribute(k,v);
+  }
+  for(const kid of kids.flat()){ if(kid==null) continue; el.append(kid.nodeType?kid:document.createTextNode(kid)); }
+  return el;
+}
+function avatar(){
+  const d=h('div',{class:'av'});
+  d.innerHTML='<svg aria-hidden="true"><use href="#doc"/></svg>';
+  return d;
+}
+
+let busy=false, sampleFn;
+const samplePromise=(async()=>{
+  try{ if(!window.claude||!window.claude.use) return null; return await window.claude.use('sample'); }
+  catch(e){ return null; }
+})().then(s=>{ sampleFn=s; return s; });
+
+function citedSet(text,srcs){
+  const s=new Set(); const re=/\[S(\d+)\]/g; let m;
+  while((m=re.exec(text))){ const i=+m[1]-1; if(srcs[i]) s.add(i); }
+  return s;
+}
+function renderRich(node,text,ex){
+  node.textContent='';
+  for(const p of text.split(/(\[S\d+\])/g)){
+    const m=/^\[S(\d+)\]$/.exec(p);
+    if(m){
+      const i=+m[1]-1, c=ex.srcs[i];
+      if(c) node.append(h('button',{class:'cite',type:'button','aria-label':'書中出處 第'+c.page+'頁',onclick:()=>openSrc(ex,i)},'第'+c.page+'頁'));
+    } else if(p) node.append(document.createTextNode(p));
+  }
+}
+function openSrc(ex,i){
+  if(!ex.srcBox) return;
+  ex.srcBox.open=true;
+  const el=ex.srcBox.querySelector('[data-i="'+i+'"]'); if(!el) return;
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  el.scrollIntoView({block:'nearest',behavior:reduce?'auto':'smooth'});
+}
+function buildSources(ex,list){
+  if(!list.length) return null;
+  const box=h('details',{class:'srcs'},h('summary',null,'書中出處（'+list.length+' 段）'));
+  list.forEach(function(c){
+    const i=ex.srcs.indexOf(c);
+    box.append(h('div',{class:'src','data-i':String(i)},
+      h('div',{class:'srcmeta'},h('b',null,'第 '+c.page+' 頁'),h('span',null,c.sec+' · '+c.title)),
+      h('p',{class:'stext'},c.text),
+      c.fig?h('p',{class:'figtag'},'圖表內容，已人工改寫為文字'):null));
+  });
+  return box;
+}
+
+function newExchange(q){
+  const ex={srcs:[],srcBox:null};
+  ex.me=h('div',{class:'me',text:q});
+  ex.tag=h('span',{class:'tagline t-pre'},'檢索書中段落…');
+  ex.body=h('div',{class:'abody'});
+  ex.bubble=h('div',{class:'bubble'},ex.tag,ex.body);
+  const row=h('div',{class:'bot'},avatar(),ex.bubble);
+  $('#log').append(ex.me,row);
+  return ex;
+}
+function finish(ex,o){
+  ex.srcs=o.srcs||[];
+  const cited=citedSet(o.text,ex.srcs);
+  const T=TAG[o.kind];
+  ex.tag.className='tagline '+T.cls; ex.tag.textContent=T.label;
+  if(BUBBLE[o.kind]) ex.bubble.classList.add(BUBBLE[o.kind]);
+  renderRich(ex.body,o.text,ex);
+  if(o.kind==='rag'&&cited.size===0) ex.bubble.append(h('p',{class:'warnline'},'這個回答沒有標出書中出處，需要人工檢視。'));
+  const showList=(o.kind==='rag'||o.kind==='error')?ex.srcs:ex.srcs.filter((c,i)=>cited.has(i));
+  if(ex.srcBox) ex.srcBox.remove();
+  ex.srcBox=buildSources(ex,o.kind==='rag'?ex.srcs:showList);
+  if(ex.srcBox) ex.bubble.append(ex.srcBox);
+}
+
+function buildPrompt(q,hits){
+  const ctx=hits.map((c,i)=>'[S'+(i+1)+']（第'+c.page+'頁，'+c.sec+'）\n'+c.text).join('\n\n');
+  return '你是《超越乳癌》這本書的衛教問答助理（原型展示版），對象是乳癌病友與家屬。\n'
+   +'請嚴格遵守：\n'
+   +'1. 只能根據下方「書中段落」回答，不可使用段落以外的醫學知識。段落沒有提到的內容，直接說「書中這幾頁沒有提到」。\n'
+   +'2. 每個重點句後面標註出處，格式為 [S1]、[S2]，編號對應書中段落。\n'
+   +'3. 不做個人診斷，不建議用藥、劑量，也不建議是否接受某項治療；涉及治療選擇時，提醒與主治醫師討論。\n'
+   +'4. 你是 AI 助理，不要假裝是任何真實醫師或作者本人，不使用「我是某某醫師」的說法。\n'
+   +'5. 語氣溫和、白話，使用台灣繁體中文；必要時簡短解釋專有名詞。\n'
+   +'6. 控制在 220 字內，可用「・」或數字條列，不要使用 markdown 標題或粗體符號。\n'
+   +'7. 若問題涉及統計數字，說明這是書中記載的資料，最新數字請以官方資料為準。\n\n'
+   +'【書中段落】\n'+ctx+'\n\n【問題】\n'+q;
+}
+
+function fallback(ex,q,hits,reason){
+  const chip=CHIPS.find(c=>c.q===q&&c.canned);
+  if(chip) finish(ex,{kind:'canned',text:chip.canned.text,srcs:chip.canned.ids.map(id=>byId[id])});
+  else finish(ex,{kind:'error',text:reason,srcs:hits});
+}
+async function live(ex,q,hits){
+  ex.srcs=hits;
+  const sample=sampleFn===undefined?await samplePromise:sampleFn;
+  if(!sample){ fallback(ex,q,hits,MSG.offline); return; }
+  ex.tag.className='tagline t-live'; ex.tag.textContent='整理回答中…';
+  try{
+    const res=await sample(buildPrompt(q,hits),{cache:false,modelTier:'default',onText:function(t){ renderRich(ex.body,t.text,ex); }});
+    finish(ex,{kind:'rag',text:res.text,srcs:hits});
+  }catch(err){
+    const code=err&&err.code;
+    fallback(ex,q,hits,code==='not_granted'?MSG.denied:code==='rate_limited'?MSG.rate:MSG.fail);
+  }
+}
+
+function setBusy(b){
+  busy=b;
+  document.querySelectorAll('.chip,#send,#newchat').forEach(el=>{ el.disabled=b; });
+  $('#mascot').classList.toggle('talk',b);
+}
+async function ask(raw){
+  const q=raw.trim();
+  if(!q||busy) return;
+  setBusy(true);
+  $('#app').classList.add('chatting');
+  const ex=newExchange(q);
+  ex.me.scrollIntoView({block:'start',behavior:reduce?'auto':'smooth'});
+  await sleep(350);
+  try{
+    const r=decide(q);
+    if(r.kind==='crisis') finish(ex,{kind:'crisis',text:MSG.crisis,srcs:[]});
+    else if(r.kind==='advice') finish(ex,{kind:'advice',text:MSG.advice,srcs:[byId.c9]});
+    else if(r.kind==='oos') finish(ex,{kind:'oos',text:MSG.oos,srcs:[]});
+    else await live(ex,q,r.hits);
+  }catch(e){
+    finish(ex,{kind:'error',text:MSG.fail,srcs:[]});
+  }finally{
+    setBusy(false);
+    ex.bubble.scrollIntoView({block:'nearest',behavior:reduce?'auto':'smooth'});
+  }
+}
+
+CHIPS.forEach(c=>{
+  $('#chips').append(h('button',{class:'chip',type:'button',onclick:()=>ask(c.q)},c.label));
+});
+$('#newchat').addEventListener('click',function(){
+  if(busy) return;
+  $('#log').textContent='';
+  $('#app').classList.remove('chatting');
+  window.scrollTo({top:0,behavior:reduce?'auto':'smooth'});
+  $('#qin').focus();
+});
+const qin=$('#qin');
+$('#ask').addEventListener('submit',e=>{
+  e.preventDefault();
+  const v=qin.value;
+  if(!v.trim()) return;
+  qin.value='';
+  ask(v);
+});
+qin.addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); $('#ask').requestSubmit(); }
+});
+})();
+</script>
+
+</body></html>
